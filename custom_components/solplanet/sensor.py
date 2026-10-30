@@ -58,6 +58,11 @@ class SolplanetSensorEntityDescription(
     """Describe Solplanet sensor entity."""
 
 
+def _grid_power_sample_attributes(data):
+    """Expose device-provided meter timestamp without changing power."""
+    return {"sample_timestamp": data.tim}
+
+
 class SolplanetSensor(SolplanetEntity, SensorEntity):
     """Representation of a Solplanet sensor."""
 
@@ -364,6 +369,7 @@ def create_meter_entites_description(
         SolplanetSensorEntityDescription(
             key=f"{isn}_pac",
             name="Grid power",
+            attributes_fn=_grid_power_sample_attributes,
             data_field_device_type=METER_IDENTIFIER,
             data_field_data_type="data",
             data_field_path=["pac"],
