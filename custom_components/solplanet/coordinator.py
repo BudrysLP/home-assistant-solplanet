@@ -1,7 +1,7 @@
 """Solplanet data coordinator."""
 
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 from homeassistant.core import HomeAssistant
@@ -21,6 +21,7 @@ class SolplanetDataUpdateCoordinator(DataUpdateCoordinator):
     ) -> None:
         """Create instance of solplanet coordinator."""
         self.__api = api
+        self._last_meter_sample_timestamp: str | None = None
 
         _LOGGER.debug("Creating inverter coordinator")
 
@@ -70,7 +71,29 @@ class SolplanetDataUpdateCoordinator(DataUpdateCoordinator):
                 submeter_data = await self.__api.get_submeter_data()
                 meter_info = await self.__api.get_meter_info()
 
-                meter = {"data": meter_data, "info": meter_info}
+                sample_timestamp = meter_data.tim
+                repeated_sample = (
+                    sample_timestamp is not None
+                    and sample_timestamp == self._last_meter_sample_timestamp
+                )
+                received_at = datetime.now(timezone.utc).isoformat()
+                _LOGGER.debug(
+                    "[METER_POWER_SAMPLE] received_at=%s sample_tim=%s "
+                    "power_w=%s repeated=%s",
+                    received_at,
+                    sample_timestamp,
+                    meter_data.pac,
+                    repeated_sample,
+                )
+                if sample_timestamp is not None:
+                    self._last_meter_sample_timestamp = sample_timestamp
+
+                meter = {
+                    "data": meter_data,
+                    "info": meter_info,
+                    "sample_received_at": received_at,
+                    "sample_repeated": repeated_sample,
+                }
                 submeter = {"data": submeter_data, "info": meter_info}
 
 
